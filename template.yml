@@ -1,0 +1,105 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Budgets Page
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: 'ServerlessBudgetsPage'
+  FrontPageApiStageName:
+    Type: String
+    Default: 'ProdStage'
+  AccountId:
+    Type: String
+    Default: '0'
+  Address:
+    Type: String
+    Default: 'email@example.com'
+
+Resources:
+  FrontPageApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ServerlessBudgetsPageApi
+      EndpointConfiguration: REGIONAL
+      StageName: !Ref FrontPageApiStageName
+  FrontPageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ServerlessBudgetsPageFrontFunction
+      CodeUri: bin/
+      Handler: main
+      MemorySize: 256
+      Runtime: go1.x
+      Description: 'Budgets Front Function'
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          API_PATH: !Join [ '', [ '/', !Ref FrontPageApiStageName, '/api'] ]
+      Events:
+        FrontPageApi:
+          Type: Api
+          Properties:
+            Path: '/'
+            Method: get
+            RestApiId: !Ref FrontPageApi
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: ServerlessBudgetsPageMainFunction
+      CodeUri: api/bin/
+      Handler: main
+      MemorySize: 256
+      Runtime: go1.x
+      Description: 'Budgets API Function'
+      Policies:
+      - Statement:
+        - Effect: 'Allow'
+          Action:
+            - 'aws-portal:ViewBilling'
+            - 'budgets:ViewBudget'
+            - 'budgets:Describe*'
+          Resource: '*'
+      Environment:
+        Variables:
+          REGION: !Ref 'AWS::Region'
+          ACCOUNT_ID: !Ref AccountId
+      Events:
+        FrontPageApi:
+          Type: Api
+          Properties:
+            Path: '/api'
+            Method: post
+            RestApiId: !Ref FrontPageApi
+  Budget:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: 100
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+        CostFilters:
+          AZ:
+            - !Ref 'AWS::Region'
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 99
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref Address
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 50
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref Address
+
+Outputs:
+  APIURI:
+    Description: "URI"
+    Value: !Join [ '', [ 'https://', !Ref FrontPageApi, '.execute-api.',!Ref 'AWS::Region','.amazonaws.com/',!Ref FrontPageApiStageName,'/'] ]

@@ -1,0 +1,31 @@
+{{define "base"}}
+<!doctype html>
+<html>
+  <head>
+{{template "headtag" .}}
+  </head>
+  <body>
+    <h1 class="ui center aligned header">AWS Budgets</h1>
+    <div class="main ui container">
+      <div class="ui segment">
+        <div class="content">
+          <div class="ui form">
+            <div class="field">
+              <label>Budgets: <span id="budgets"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="warning" class="ui hidden warning message"></div>
+    <div id="info" class="ui hidden info message">
+      <div class="header">
+        Result
+      </div>
+      <div class="ui segment">
+        <pre id="result"></pre>
+      </div>
+    </div>
+  </body>
+</html>
+{{end}}
